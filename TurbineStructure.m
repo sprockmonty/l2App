@@ -2,6 +2,7 @@
 
 clear
 clc
+close all
 
 %Define points of turbine (all units in meters and kg and m/s)
 points(1:11,1) = 1:11;
@@ -13,14 +14,18 @@ aeroFoilPoints = fscanf(aerofoilDefinition, '%f %f %f', [3,Inf]);
 aeroFoilPoints(3,:) = [];
 
 plot(aeroFoilPoints(1,:),aeroFoilPoints(2,:));
+axis equal
 figure
 
 
 points(1:11,2) = 1:11;
 
 
-density = 1070;
-angVel = 10;
+density = 945;
+TSR=6; %tip speed ratio
+R=0.55;
+v=12; 
+angVel = TSR*v/R; %v= air velocity, R= radius
 accuracy = 0.1;
 
 betterPoints(:,1) = points(1,1):accuracy:points(end,1);
