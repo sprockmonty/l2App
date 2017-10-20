@@ -3,26 +3,34 @@
 clear
 clc
 
-%Define points of turbine (all units in meters and kg and m/s)
-points(1:11,1) = 1:11;
-
+%%
+%Define location of section points on x (all units in meters and kg and m/s)
+points(1:11,1) = 0:0.1:1; 
+%%
 %area calculation
 aerofoilDefinition = fopen('sg6042.txt', 'r');   %change text to load different set of points
 fscanf(aerofoilDefinition,'%c %c %c',3);  %read first line + discard (just header titles)
 aeroFoilPoints = fscanf(aerofoilDefinition, '%f %f %f', [3,Inf]);
 aeroFoilPoints(3,:) = [];
 
+
+
+%Area Claculations
+[~,minIndex] = min(aeroFoilPoints(1,:));
+foilYFuncHandle = @foilYFunc; %just returns the y points
+foilArea = -simpsonInt(1,minIndex, aeroFoilPoints', foilYFuncHandle);
+foilArea = foilArea - simpsonInt(minIndex,length(aeroFoilPoints), aeroFoilPoints', foilYFuncHandle);
+%plot aerofoil
 plot(aeroFoilPoints(1,:),aeroFoilPoints(2,:));
 figure
+%%
+points(1:11,2) = foilArea * 0.0001;  %area points
+%%
 
-
-points(1:11,2) = 1:11;
-
-
-density = 1070;
-angVel = 10;
+density = 945;
+angVel = 100;
 accuracy = 0.1;
-
+%%
 betterPoints(:,1) = points(1,1):accuracy:points(end,1);
 %spline interpolation of points
 betterPoints(:,2) = spline(points(:,1), points(:,2), betterPoints(:,1));
@@ -39,5 +47,8 @@ function vol = centIntFunc(points)
     vol = points(:,1) .* points(:,2);
 end
 
+function yVal = foilYFunc(points)
+    yVal = points(:,2);
+end
 
 %remember to devide by area at root to get stress
