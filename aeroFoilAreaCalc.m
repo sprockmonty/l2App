@@ -1,8 +1,6 @@
 function foilArea = aeroFoilAreaCalc(aeroFoilPoints)
-    [~,minIndex] = min(aeroFoilPoints(1,:));
     foilYFuncHandle = @foilYFunc; %just returns the y points
-    foilArea = -simpsonInt(1,minIndex, aeroFoilPoints', foilYFuncHandle);
-    foilArea = foilArea - simpsonInt(minIndex,length(aeroFoilPoints), aeroFoilPoints', foilYFuncHandle); %dimensionless
+    foilArea = -simpsonInt(1,length(aeroFoilPoints), aeroFoilPoints', foilYFuncHandle);
     
     function yVal = foilYFunc(points)
         yVal = points(:,2);

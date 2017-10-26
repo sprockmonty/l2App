@@ -17,12 +17,14 @@ aeroFoilPoints(3,:) = [];
 %Area Claculations
 foilArea = aeroFoilAreaCalc(aeroFoilPoints);
 %plot aerofoil
+figure(1)
 plot(aeroFoilPoints(1,:),aeroFoilPoints(2,:));
 axis equal
-figure
+figure(2)
 
 %%
-points(:,2) = foilArea * ([0.5e-01,1.57670e-01,1.46300e-01,1.17330e-01,9.34700e-02,7.70200e-02,6.52559e-02,5.65000e-02,4.97700e-02,4.44400e-02,4.01320e-02,3.64840e-02]).^2;  %area points
+chord = [0.05,0.115,0.125,0.105,0.0935,0.077,0.0653,0.0565,0.0498,0.0444,0.0401,0.0365];
+points(:,2) = foilArea * (chord).^2;  %area points
 %%
 density = 945;
 TSR=6; %tip speed ratio
@@ -41,6 +43,35 @@ centResult = simpsonInt(1, 11, points, centIntFuncHandle);
 centResult = centResult * density * angVel^2;
 fprintf('Final centrifigual force is %2.2f \n and stress is %2.2f', centResult, centResult / points(1,2));
 
+%%
+%Torque calculations
+[xRoid, yRoid] = centroidCalc(foilArea, aeroFoilPoints);
+figure(1)
+hold on
+scatter(xRoid,yRoid)
+
+
+%is function of reynolds so remember to chech bruv
+airDense = 1.225;
+aoA = 7.4; %In degrees
+cD = 0.02; 
+cL = 1.4; 
+velocity = ((points(:,1) .* angVel).^2 + (8)^2).^0.5; 
+lift = cL .* 0.5 .* 1.225 .* velocity.^2 .* chord';
+drag = cD * 0.5 * 1.225 .* velocity.^2 .* chord';
+
+%geometry calculations 
+xRoidDifference = xRoid .* chord - 0.25 .*chord;
+yRoidDifference = yRoid .* chord;
+lengthToCentroid = (xRoidDifference.^2 + yRoidDifference.^2).^0.5;
+beta = rad2deg(atan(yRoidDifference(1) / xRoidDifference(1)));
+gamma = beta - aoA;
+react = lift .* cos(deg2rad(gamma)) - drag .* sin(deg2rad(gamma));
+torque = lengthToCentroid' .* react;    %per unit span
+%%
+%Deflection Calculations
+verticalDistDeflec = lift * cos(deg2rad(aoA)) + drag * sin(deg2rad(aoA));    %vertical distributed deflection 
+horizontalDistDeflec = drag * cos(deg2rad(aoA)) - lift * sin(deg2rad(aoA));
 
 %function for calculating centrifugal force at each dx
 function vol = centIntFunc(points)
