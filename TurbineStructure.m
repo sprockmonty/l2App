@@ -6,6 +6,7 @@ close all
 
 %%
 %Define location of section points on x (all units in meters and kg and m/s)
+%0 is at the root
 points(:,1) = 0:0.05:0.55;  %in m
 %%
 %area calculation
@@ -44,7 +45,8 @@ centResult = centResult * density * angVel^2;
 fprintf('Final centrifigual force is %2.2f \n and stress is %2.2f', centResult, centResult / points(1,2));
 
 %%
-%Torque calculations
+
+%centroid
 [xRoid, yRoid] = centroidCalc(foilArea, aeroFoilPoints);
 figure(1)
 hold on
@@ -57,10 +59,12 @@ aoA = 7.4; %In degrees
 cD = 0.02; 
 cL = 1.4; 
 velocity = ((points(:,1) .* angVel).^2 + (8)^2).^0.5; 
-lift = cL .* 0.5 .* 1.225 .* velocity.^2 .* chord';
-drag = cD * 0.5 * 1.225 .* velocity.^2 .* chord';
+lift = cL .* 0.5 .* airDense .* velocity.^2 .* chord';
+drag = cD * 0.5 * airDense .* velocity.^2 .* chord';
 
-%geometry calculations 
+
+%%
+%Torque calculations
 xRoidDifference = xRoid .* chord - 0.25 .*chord;
 yRoidDifference = yRoid .* chord;
 lengthToCentroid = (xRoidDifference.^2 + yRoidDifference.^2).^0.5;
@@ -70,14 +74,39 @@ react = lift .* cos(deg2rad(gamma)) - drag .* sin(deg2rad(gamma));
 torque = lengthToCentroid' .* react;    %per unit span
 %%
 %Deflection Calculations
-verticalDistDeflec = lift * cos(deg2rad(aoA)) + drag * sin(deg2rad(aoA));    %vertical distributed deflection 
-horizontalDistDeflec = drag * cos(deg2rad(aoA)) - lift * sin(deg2rad(aoA));
+youngsMod = 2.18e6;%of abs
+verticalDistReact = lift * cos(deg2rad(aoA)) + drag * sin(deg2rad(aoA));    %vertical distributed deflection 
+horizontalDistReact = drag * cos(deg2rad(aoA)) - lift * sin(deg2rad(aoA));
+
+momOfInertia = 4.98523914e-5; %for chord lenght of 1
+scaledMomOfInertia = momOfInertia * chord .^4;
+
+%vertical Deflec Integrations
+yFuncHandle = @yFunc;
+forceDistribution = intDistribution(points(:,1), verticalDistReact, yFuncHandle);
+momentDistribution = intDistribution(points(:,1), forceDistribution', yFuncHandle);
+d2vdz2 = intDistribution(points(:,1), (momentDistribution./(scaledMomOfInertia*youngsMod))', yFuncHandle);
+dvdz = intDistributionFromRoot(points(:,1), d2vdz2', yFuncHandle);
+deflection = intDistributionFromRoot(points(:,1), dvdz', yFuncHandle);
+
+figure(3)
+plot(points(:,1), deflection);
+
 
 %function for calculating centrifugal force at each dx
 function vol = centIntFunc(points)
     vol = points(:,1) .* points(:,2);
 end
 
+function intResult = intDistribution(radiusPoints,inputDistribution, yFuncHandle)
+    for i = 1:length(inputDistribution)
+        intResult(length(inputDistribution)-i+1) = simpsonInt(length(inputDistribution)-i+1,length(inputDistribution), [radiusPoints(:,1),inputDistribution], yFuncHandle);
+    end
+end
 
+function intResult = intDistributionFromRoot(radiusPoints,inputDistribution, yFuncHandle)
+    for i = 1:length(inputDistribution)
+        intResult(i) = simpsonInt(1,i, [radiusPoints(:,1),inputDistribution], yFuncHandle);
+    end
+end
 
-%remember to devide by area at root to get stress
